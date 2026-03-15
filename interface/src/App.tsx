@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, RefreshCw, Printer, Search, AlertTriangle, Info, TerminalSquare, AlertCircle } from 'lucide-react';
-
+import LandingPage from './LandingPage';
 interface PrinterInfo {
   ip: string;
   model: string;
@@ -10,6 +10,7 @@ interface PrinterInfo {
 }
 
 function App() {
+  const [isCloudHosted, setIsCloudHosted] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [printers, setPrinters] = useState<PrinterInfo[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState<PrinterInfo | null>(null);
@@ -52,6 +53,20 @@ function App() {
       setResetStatus('error');
     }
   };
+
+  // Se estiver rodando em um servidor web real, retorna a Landing Page Comercial.
+  // Se for Electron file:// ou localhost (dev mode web), mostra o app.
+  useEffect(() => {
+    const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
+    const isFileProto = window.location.protocol === 'file:';
+    if (!isLocal && !isFileProto) {
+      setIsCloudHosted(true);
+    }
+  }, []);
+
+  if (isCloudHosted) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="min-h-screen p-8 text-slate-100 flex flex-col items-center">
@@ -186,7 +201,7 @@ function App() {
                                         selectedPrinter.wasteScore > 50 ? 'bg-yellow-500' : 'bg-brand-500'
                                     }`}
                                 >
-                                    <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite] -skew-x-12 translate-x-[-100%] border-r border-white/40"></div>
+                                    <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite] -skew-x-12 -translate-x-full border-r border-white/40"></div>
                                 </motion.div>
                             </div>
                             
@@ -221,7 +236,7 @@ function App() {
                             className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${
                                 resetStatus === 'success' || selectedPrinter.wasteScore === 0
                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                                : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg shadow-red-500/20 border border-red-400/30'
+                                : 'bg-linear-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg shadow-red-500/20 border border-red-400/30'
                             }`}
                         >
                             {resetStatus === 'resetting' ? (
