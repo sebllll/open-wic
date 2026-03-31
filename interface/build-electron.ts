@@ -12,8 +12,9 @@ async function buildElectron() {
     bundle: true,
     platform: 'node',
     target: 'node18',
-    outfile: 'dist-electron/main.js',
-    external: ['electron', 'electron-is-dev'], // Evitar empacotar natives e node modules problematicos
+    format: 'cjs',
+    outfile: 'dist-electron/main.cjs',
+    external: ['electron', 'electron-is-dev'],
   });
   console.log('✅ Script Electron Buildado!');
   
