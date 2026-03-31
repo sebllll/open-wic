@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
 
 const isDev = !app.isPackaged;
@@ -13,14 +14,14 @@ let serverProcess: ChildProcess | null = null;
  * In production: spawns the bundled exe from extraResources/backend/.
  */
 function startBackendServer() {
-  if (isDev) {
-    console.log('[Backend] Dev mode – expecting server already running on :8000');
+  // Check if the bundled backend exe exists (works for both packaged and unpacked builds)
+  const serverExe = path.join(process.resourcesPath, 'backend', 'open-wic-server.exe');
+
+  if (!fs.existsSync(serverExe)) {
+    console.log('[Backend] No bundled server found – expecting server already running on :8000');
     return;
   }
 
-  // In production, extraResources are unpacked next to the app in the "resources" dir.
-  // electron-builder places extraResources at: process.resourcesPath/backend/
-  const serverExe = path.join(process.resourcesPath, 'backend', 'open-wic-server.exe');
   const libusb = path.join(process.resourcesPath, 'backend', 'libusb-1.0.dll');
 
   console.log(`[Backend] Starting server: ${serverExe}`);
@@ -76,17 +77,20 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false, // For MVP only. Em prod real usar preload.js
+      webSecurity: false, // Allow file:// protocol to load module scripts
     },
   });
 
   if (isDev) {
     // In dev mode, wait for Vite dev server then load it
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
   } else {
     // In production mode, load the Vite static build
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
+
+  // Always open DevTools for debugging (remove later)
+  mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', () => {
     mainWindow = null;

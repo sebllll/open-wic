@@ -23,7 +23,7 @@ export default function LandingPage() {
 
     try {
       // Tentar salvar no Supabase (se as variáveis VITE_ estiverem configuradas no Vercel)
-      if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && supabase) {
         const { error: dbError } = await supabase
           .from('leads')
           .insert([{ email, source: 'open_wic_landing' }]);

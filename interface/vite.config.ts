@@ -8,5 +8,15 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // Strip crossorigin attributes for Electron file:// compatibility
+    {
+      name: 'remove-crossorigin',
+      transformIndexHtml(html) {
+        return html.replace(/ crossorigin/g, '');
+      },
+    },
   ],
+  build: {
+    modulePreload: false,
+  },
 })
