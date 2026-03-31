@@ -1,8 +1,68 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import isDev from 'electron-is-dev';
+import { spawn, ChildProcess } from 'child_process';
 
 let mainWindow: BrowserWindow | null = null;
+let serverProcess: ChildProcess | null = null;
+
+/**
+ * Start the Python backend server (open-wic-server.exe).
+ * In dev mode: assumes server is already running externally.
+ * In production: spawns the bundled exe from extraResources/backend/.
+ */
+function startBackendServer() {
+  if (isDev) {
+    console.log('[Backend] Dev mode – expecting server already running on :8000');
+    return;
+  }
+
+  // In production, extraResources are unpacked next to the app in the "resources" dir.
+  // electron-builder places extraResources at: process.resourcesPath/backend/
+  const serverExe = path.join(process.resourcesPath, 'backend', 'open-wic-server.exe');
+  const libusb = path.join(process.resourcesPath, 'backend', 'libusb-1.0.dll');
+
+  console.log(`[Backend] Starting server: ${serverExe}`);
+  console.log(`[Backend] libusb DLL: ${libusb}`);
+
+  serverProcess = spawn(serverExe, [], {
+    cwd: path.dirname(serverExe),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      // Ensure libusb can be found in the same directory
+      PATH: path.dirname(serverExe) + ';' + (process.env.PATH || ''),
+    },
+  });
+
+  serverProcess.stdout?.on('data', (data: Buffer) => {
+    console.log(`[Backend] ${data.toString().trim()}`);
+  });
+
+  serverProcess.stderr?.on('data', (data: Buffer) => {
+    console.error(`[Backend] ${data.toString().trim()}`);
+  });
+
+  serverProcess.on('error', (err) => {
+    console.error(`[Backend] Failed to start server: ${err.message}`);
+  });
+
+  serverProcess.on('exit', (code) => {
+    console.log(`[Backend] Server exited with code ${code}`);
+    serverProcess = null;
+  });
+}
+
+/**
+ * Kill the backend server process.
+ */
+function stopBackendServer() {
+  if (serverProcess && !serverProcess.killed) {
+    console.log('[Backend] Stopping server...');
+    serverProcess.kill();
+    serverProcess = null;
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -34,6 +94,7 @@ function createWindow() {
 
 // Inicia o app do Electron
 app.whenReady().then(() => {
+  startBackendServer();
   createWindow();
 
   app.on('activate', () => {
@@ -41,14 +102,15 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-
-  // Em um app de produção completo, aqui nós usaríamos child_process para subir 
-  // um binário Python embutido (ex: pyinstaller) como Daemon ouvindo na porta local. 
-  // Para MVP Open Source React, vamos focar no visual empacotado puro.
 });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    stopBackendServer();
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  stopBackendServer();
 });

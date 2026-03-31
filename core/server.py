@@ -104,4 +104,6 @@ async def reset_printer(printer_ip: str):
         await asyncio.sleep(3) # Simulando o WRITE EEPROM timing para IPs
         return {"status": "success", "message": f"Contador EEPROM de {printer_ip} reescrito para 0x00 via SNMP (Simulado)"}
 
-# Iniciar: uvicorn server:app --reload
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)

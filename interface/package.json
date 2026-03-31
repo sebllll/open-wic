@@ -24,6 +24,13 @@
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/",
+        "to": "backend/",
+        "filter": ["**/*"]
+      }
     ]
   },
   "scripts": {
