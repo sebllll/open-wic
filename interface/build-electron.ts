@@ -14,7 +14,7 @@ async function buildElectron() {
     target: 'node18',
     format: 'cjs',
     outfile: 'dist-electron/main.cjs',
-    external: ['electron', 'electron-is-dev'],
+    external: ['electron'],
   });
   console.log('✅ Script Electron Buildado!');
   

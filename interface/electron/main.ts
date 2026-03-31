@@ -1,7 +1,8 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
-import isDev from 'electron-is-dev';
 import { spawn, ChildProcess } from 'child_process';
+
+const isDev = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 let serverProcess: ChildProcess | null = null;
