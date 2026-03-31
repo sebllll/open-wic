@@ -8,59 +8,28 @@ const isDev = !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
 let serverProcess: ChildProcess | null = null;
 
-/**
- * Start the Python backend server (open-wic-server.exe).
- * In dev mode: assumes server is already running externally.
- * In production: spawns the bundled exe from extraResources/backend/.
- */
 function startBackendServer() {
-  // Check if the bundled backend exe exists (works for both packaged and unpacked builds)
   const serverExe = path.join(process.resourcesPath, 'backend', 'open-wic-server.exe');
-
   if (!fs.existsSync(serverExe)) {
-    console.log('[Backend] No bundled server found – expecting server already running on :8000');
+    console.log('[Backend] No bundled server found – assuming external dev server on :8000');
     return;
   }
 
-  const libusb = path.join(process.resourcesPath, 'backend', 'libusb-1.0.dll');
-
-  console.log(`[Backend] Starting server: ${serverExe}`);
-  console.log(`[Backend] libusb DLL: ${libusb}`);
-
+  console.log(`[Backend] Starting: ${serverExe}`);
   serverProcess = spawn(serverExe, [], {
     cwd: path.dirname(serverExe),
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      // Ensure libusb can be found in the same directory
-      PATH: path.dirname(serverExe) + ';' + (process.env.PATH || ''),
-    },
+    env: { ...process.env, PATH: path.dirname(serverExe) + ';' + (process.env.PATH || '') },
   });
 
-  serverProcess.stdout?.on('data', (data: Buffer) => {
-    console.log(`[Backend] ${data.toString().trim()}`);
-  });
-
-  serverProcess.stderr?.on('data', (data: Buffer) => {
-    console.error(`[Backend] ${data.toString().trim()}`);
-  });
-
-  serverProcess.on('error', (err) => {
-    console.error(`[Backend] Failed to start server: ${err.message}`);
-  });
-
-  serverProcess.on('exit', (code) => {
-    console.log(`[Backend] Server exited with code ${code}`);
-    serverProcess = null;
-  });
+  serverProcess.stdout?.on('data', (d: Buffer) => console.log(`[Backend] ${d.toString().trim()}`));
+  serverProcess.stderr?.on('data', (d: Buffer) => console.error(`[Backend] ${d.toString().trim()}`));
+  serverProcess.on('error', (err) => console.error(`[Backend] ${err.message}`));
+  serverProcess.on('exit', (code) => { console.log(`[Backend] exited (${code})`); serverProcess = null; });
 }
 
-/**
- * Kill the backend server process.
- */
 function stopBackendServer() {
   if (serverProcess && !serverProcess.killed) {
-    console.log('[Backend] Stopping server...');
     serverProcess.kill();
     serverProcess = null;
   }
@@ -77,20 +46,18 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false, // For MVP only. Em prod real usar preload.js
-      webSecurity: false, // Allow file:// protocol to load module scripts
+      webSecurity: false, // Allow file:// to load module scripts
     },
   });
 
   if (isDev) {
     // In dev mode, wait for Vite dev server then load it
     mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
   } else {
     // In production mode, load the Vite static build
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
-
-  // Always open DevTools for debugging (remove later)
-  mainWindow.webContents.openDevTools();
 
   mainWindow.on('closed', () => {
     mainWindow = null;

@@ -9,6 +9,7 @@ release/
 venv/
 __pycache__/
 *.pyc
+*.spec
 core/build/
 core/dist/
 
@@ -21,3 +22,4 @@ interface/resources/
 
 # Env
 .env
+*.log
