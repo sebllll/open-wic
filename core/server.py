@@ -31,8 +31,8 @@ class Printer(BaseModel):
 OID_MODEL = '1.3.6.1.2.1.25.3.2.1.3.1'
 OID_SYS_NAME = '1.3.6.1.2.1.1.5.0'
 OID_STATUS = '1.3.6.1.2.1.25.3.5.1.1.1'
-OID_WASTE_INK_LEVEL = '1.3.6.1.4.1.1248.1.2.2.1.1.1.1.1'
-OID_RESET_COMMAND = '1.3.6.1.4.1.1248.1.2.2.1.1.1.1.2'
+# Note: Waste ink counter is stored in EEPROM, not accessible via SNMP.
+# Use reinkpy + USB to read/reset it.
 
 async def fetch_snmp(ip: str, oid: str, timeout: float = 1.5, retries: int = 1):
     """Fetch a single SNMP OID value (pysnmp v7 API)."""
@@ -72,13 +72,13 @@ async def _probe_epson(ip: str) -> dict | None:
     if not model or "epson" not in model.lower():
         return None
     sys_name = await fetch_snmp(ip, OID_SYS_NAME)
-    waste_raw = await fetch_snmp(ip, OID_WASTE_INK_LEVEL)
-    waste = int(waste_raw) if waste_raw and waste_raw.isdigit() else 0
+    # Waste ink counter is NOT readable via SNMP — only via USB/EEPROM.
+    # Return -1 to signal "unknown" to the frontend.
     return {
         "ip": ip,
         "model": model,
         "status": f"Online - Wi-Fi ({sys_name or 'unknown'})",
-        "wasteScore": min(waste, 100),
+        "wasteScore": -1,
     }
 
 @app.get("/scan")

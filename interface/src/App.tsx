@@ -6,7 +6,7 @@ interface PrinterInfo {
   ip: string;
   model: string;
   status: string;
-  wasteScore: number; // 0 to 100
+  wasteScore: number; // 0-100, or -1 = unknown (Wi-Fi printer)
 }
 
 function App() {
@@ -137,7 +137,7 @@ function App() {
                     >
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="font-semibold text-lg text-white">{printer.model}</h3>
-                            {printer.wasteScore > 90 && <AlertTriangle className="w-5 h-5 text-red-400" />}
+                            {printer.wasteScore > 90 ? <AlertTriangle className="w-5 h-5 text-red-400" /> : printer.wasteScore < 0 ? <Info className="w-4 h-4 text-slate-500" /> : null}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-400 mb-3">
                             <span className="bg-slate-900/50 px-2 py-1 rounded text-xs font-mono">{printer.ip}</span>
@@ -145,12 +145,18 @@ function App() {
                         
                         {/* Progress Bar Mini */}
                         <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
-                            <div 
-                                className={`h-1.5 rounded-full ${
-                                    printer.wasteScore > 80 ? 'bg-red-500' : printer.wasteScore > 50 ? 'bg-yellow-500' : 'bg-brand-500'
-                                }`}
-                                style={{ width: `${printer.wasteScore}%` }}
-                            ></div>
+                            {printer.wasteScore >= 0 ? (
+                                <div 
+                                    className={`h-1.5 rounded-full ${
+                                        printer.wasteScore > 80 ? 'bg-red-500' : printer.wasteScore > 50 ? 'bg-yellow-500' : 'bg-brand-500'
+                                    }`}
+                                    style={{ width: `${printer.wasteScore}%` }}
+                                ></div>
+                            ) : (
+                                <div className="h-1.5 rounded-full bg-slate-700 w-full flex items-center justify-center">
+                                    <span className="text-[6px] text-slate-500 leading-none">?</span>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ))}
@@ -185,26 +191,40 @@ function App() {
                             <div className="flex justify-between items-end mb-2">
                                 <span className="text-slate-300 font-medium">Waste Ink Pad Counter (EEPROM)</span>
                                 <span className={`text-2xl font-bold ${
+                                    selectedPrinter.wasteScore < 0 ? 'text-slate-500' :
                                     selectedPrinter.wasteScore > 80 ? 'text-red-400' : 'text-brand-400'
                                 }`}>
-                                    {selectedPrinter.wasteScore}%
+                                    {selectedPrinter.wasteScore < 0 ? 'Unknown' : `${selectedPrinter.wasteScore}%`}
                                 </span>
                             </div>
                             
                             <div className="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-slate-800">
-                                <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${selectedPrinter.wasteScore}%` }}
-                                    transition={{ duration: 1, ease: "easeOut" }}
-                                    className={`h-full relative overflow-hidden ${
-                                        selectedPrinter.wasteScore > 80 ? 'bg-red-500' : 
-                                        selectedPrinter.wasteScore > 50 ? 'bg-yellow-500' : 'bg-brand-500'
-                                    }`}
-                                >
-                                    <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite] -skew-x-12 -translate-x-full border-r border-white/40"></div>
-                                </motion.div>
+                                {selectedPrinter.wasteScore >= 0 ? (
+                                    <motion.div 
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${selectedPrinter.wasteScore}%` }}
+                                        transition={{ duration: 1, ease: "easeOut" }}
+                                        className={`h-full relative overflow-hidden ${
+                                            selectedPrinter.wasteScore > 80 ? 'bg-red-500' : 
+                                            selectedPrinter.wasteScore > 50 ? 'bg-yellow-500' : 'bg-brand-500'
+                                        }`}
+                                    >
+                                        <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite] -skew-x-12 -translate-x-full border-r border-white/40"></div>
+                                    </motion.div>
+                                ) : (
+                                    <div className="h-full bg-slate-800 flex items-center justify-center">
+                                        <span className="text-[10px] text-slate-600">Connect via USB to read EEPROM</span>
+                                    </div>
+                                )}
                             </div>
                             
+                            {selectedPrinter.wasteScore < 0 && (
+                                <p className="text-slate-500 mt-3 text-sm flex items-start gap-2">
+                                    <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                                    Waste ink counter cannot be read over Wi-Fi. Connect the printer via USB to read and reset the EEPROM counter.
+                                </p>
+                            )}
+
                             {selectedPrinter.wasteScore > 80 && (
                                 <p className="text-red-400/80 mt-3 text-sm flex items-start gap-2">
                                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -232,7 +252,7 @@ function App() {
 
                         <button 
                             onClick={() => handleReset(selectedPrinter)}
-                            disabled={resetStatus === 'resetting' || selectedPrinter.wasteScore === 0}
+                            disabled={resetStatus === 'resetting' || selectedPrinter.wasteScore === 0 || selectedPrinter.wasteScore < 0}
                             className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${
                                 resetStatus === 'success' || selectedPrinter.wasteScore === 0
                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
@@ -243,6 +263,11 @@ function App() {
                                 <>
                                     <RefreshCw className="w-6 h-6 animate-spin" />
                                     Modifying EEPROM...
+                                </>
+                            ) : selectedPrinter.wasteScore < 0 ? (
+                                <>
+                                    <Info className="w-6 h-6 text-slate-500" />
+                                    USB Connection Required
                                 </>
                             ) : resetStatus === 'success' || selectedPrinter.wasteScore === 0 ? (
                                 <>
