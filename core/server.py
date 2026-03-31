@@ -18,9 +18,9 @@ app.add_middleware(
 )
 
 class Printer(BaseModel):
-    ip: string
-    model: string
-    status: string
+    ip: str
+    model: str
+    status: str
     wasteScore: int
 
 # OIDs Básicos da Epson via SNMP
