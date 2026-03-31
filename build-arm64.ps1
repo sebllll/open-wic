@@ -109,14 +109,14 @@ Write-Host "`n[4/8] libusb 1.0.27 ARM64 herunterladen..." -ForegroundColor Yello
 
 if (-not (Test-Path $BuildDir)) { New-Item -ItemType Directory -Path $BuildDir | Out-Null }
 
-$libusbArchive = Join-Path $BuildDir "libusb-1.0.27.7z"
+$libusbArchive = Join-Path $BuildDir "libusb-1.0.29.7z"
 $libusbDir = Join-Path $BuildDir "libusb"
-$libusbDll = Join-Path $libusbDir "VS2022\Release\arm64\libusb-1.0.dll"
+$libusbDll = Join-Path $libusbDir "MinGW-llvm-aarch64\dll\libusb-1.0.dll"
 
 if (-not (Test-Path $libusbDll)) {
-    Write-Host "  -> Lade libusb-1.0.27.7z herunter..."
+    Write-Host "  -> Lade libusb-1.0.29.7z herunter..."
     Invoke-WebRequest `
-        -Uri "https://github.com/libusb/libusb/releases/download/v1.0.27/libusb-1.0.27.7z" `
+        -Uri "https://github.com/libusb/libusb/releases/download/v1.0.29/libusb-1.0.29.7z" `
         -OutFile $libusbArchive
 
     Write-Host "  -> Entpacke mit 7-Zip..."

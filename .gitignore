@@ -9,6 +9,12 @@ release/
 venv/
 __pycache__/
 *.pyc
+core/build/
+core/dist/
+
+# Build artifacts
+build-tmp/
+interface/resources/
 
 # OS
 .DS_Store
