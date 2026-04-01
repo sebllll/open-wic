@@ -7,8 +7,6 @@ from pysnmp.hlapi.asyncio import (
     SnmpEngine, CommunityData, UdpTransportTarget,
     ContextData, ObjectType, ObjectIdentity, get_cmd
 )
-import usb.core
-import usb.util
 
 app = FastAPI(title="Open WIC API")
 
@@ -100,21 +98,42 @@ async def scan_printers():
         if r:
             printers_found.append(r)
 
-    # 2) USB scan for locally connected Epson printers
+    # 2) USB scan — use reinkpy to read EEPROM waste ink counter
     try:
-        EPSON_VENDOR_ID = 0x04b8
-        devices = usb.core.find(find_all=True, idVendor=EPSON_VENDOR_ID)
-
-        for dev in devices:
+        import reinkpy
+        for udev in reinkpy.UsbDevice.ifind(manufacturer="EPSON"):
             try:
-                model = usb.util.get_string(dev, dev.iProduct) or "Epson Unknown"
-                serial = usb.util.get_string(dev, dev.iSerialNumber) or "N/A"
+                model = udev.model or "Epson Unknown"
+                serial = udev.serial_number or "N/A"
+                waste_score = -1
+                try:
+                    epson = udev.epson.configure(True)
+                    waste_mem = epson.spec.get_mem('waste counter')
+                    if waste_mem:
+                        vals = epson.read_eeprom(*waste_mem['addr'])
+                        total = sum(v for _, v in vals if v is not None)
+                        # Epson waste pads typically overflow at ~100-130% (values ~8000-12000)
+                        # Each counter byte is 0-255, main counter pair = high*256+low
+                        addrs = waste_mem['addr']
+                        if len(addrs) >= 2:
+                            # First pair is usually the main waste counter (little-endian)
+                            raw_vals = [v for _, v in vals if v is not None]
+                            if len(raw_vals) >= 2:
+                                main_counter = raw_vals[0] + raw_vals[1] * 256
+                                # Typical overflow ~8000-12000, use 8000 as 100%
+                                waste_score = min(int(main_counter / 80), 100)
+                            else:
+                                waste_score = min(total, 100)
+                        else:
+                            waste_score = min(total, 100)
+                except Exception as e:
+                    print(f"EEPROM read error for {model}: {e}")
 
                 printers_found.append({
                     "ip": f"USB (Serial: {serial})",
                     "model": model,
                     "status": "Online - USB Local",
-                    "wasteScore": 99
+                    "wasteScore": waste_score,
                 })
             except Exception:
                 pass
